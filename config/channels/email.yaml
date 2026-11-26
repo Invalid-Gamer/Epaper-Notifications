@@ -1,0 +1,31 @@
+# E-Mail-Channel (SMTP)
+#
+# Der Dateiname ist der Channel-Name: email.yaml -> channel "email".
+# Weitere Channels (discord.yaml, ntfy.yaml, ...) werden einfach als eigene
+# Datei in diesem Ordner angelegt. Dateien, die mit "_" beginnen, werden ignoriert.
+#
+# Platzhalter:  ${VAR}           Wert aus der Umgebung (.env), Fehler wenn nicht gesetzt
+#               ${VAR:-default}  mit Default
+# Passwörter gehören in die .env, nie direkt in diese Datei.
+
+# Account, der verwendet wird, wenn ein Request keinen "account" angibt.
+default_account: main
+
+accounts:
+  main:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:-587}
+    tls: ${SMTP_TLS:-starttls}      # starttls | tls | none
+    username: ${SMTP_USER:-}
+    password: ${SMTP_PASSWORD:-}
+    from: ${SMTP_FROM:-DoorSign <noreply@example.com>}
+    timeout: 10s
+
+  # Weiterer Account (später per "account": "marketing" im Request auswählbar):
+  # marketing:
+  #   host: ${SMTP_MARKETING_HOST}
+  #   port: 587
+  #   tls: starttls
+  #   username: ${SMTP_MARKETING_USER}
+  #   password: ${SMTP_MARKETING_PASSWORD}
+  #   from: "Beispiel Newsletter <news@example.com>"

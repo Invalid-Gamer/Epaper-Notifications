@@ -1,0 +1,52 @@
+# Epaper Notifications + (optional) Mailpit zum Testen.
+#
+#   make network   # einmalig: externes Netzwerk anlegen, falls es noch nicht existiert
+#   make up        # nur Epaper Notifications
+#   make dev       # Epaper Notifications + Mailpit (Mail-UI: http://localhost:8025)
+
+services:
+  epaper-notifications:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
+    image: epaper-notifications:${VERSION:-dev}
+    container_name: epaper-notifications
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Templates und Channel-Configs von außen änderbar (Änderungen: make restart).
+      - ./templates:/app/templates:ro
+      - ./config:/app/config:ro
+    # Auf localhost veröffentlicht, nur für lokale Tests und für einen Reverse Proxy
+    # auf demselben Host. Läuft der Proxy im selben Docker-Netzwerk, kann man
+    # "ports" ersetzen durch "expose" und den Container direkt ansprechen.
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:${API_PORT:-8080}"        # intern, PSK-geschützt
+      - "127.0.0.1:${PUBLIC_PORT:-8081}:${PUBLIC_PORT:-8081}"  # nur /confirm/{token}
+    networks:
+      - platform
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: epaper-notifications-mailpit
+    profiles: ["dev"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"   # Web-UI
+    networks:
+      - platform
+
+networks:
+  platform:
+    name: ${DOCKER_NETWORK:-platform}
+    external: true

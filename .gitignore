@@ -1,0 +1,14 @@
+# Geheimnisse
+.env
+.env.*
+!.env.example
+
+# Build
+/bin/
+coverage.out
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+/zips/

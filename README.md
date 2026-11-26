@@ -1,6 +1,6 @@
-# Notifier
+# Epaper-Notifications
 
-Notification-Microservice in Go. Andere Services senden Aufträge per REST-API, der Notifier rendert Templates und verschickt sie über konfigurierbare Channels (vorerst E-Mail via SMTP).
+Notification-Microservice in Go. Andere Services senden Aufträge per REST-API, der Service rendert Templates und verschickt sie über konfigurierbare Channels (vorerst E-Mail via SMTP).
 
 **Status:** Phase 0 und 1 (Fundament, Config, Domain, Stores). Die Health-Endpunkte laufen. Templates, E-Mail-Versand, Dispatcher und die eigentliche REST-API folgen in den nächsten Phasen.
 
@@ -9,7 +9,7 @@ Notification-Microservice in Go. Andere Services senden Aufträge per REST-API, 
 ```bash
 cp .env.example .env          # PSK und PUBLIC_BASE_URL anpassen
 make network                  # einmalig: Docker-Netzwerk anlegen, falls nötig
-make dev                      # Notifier + Mailpit (Mail-UI: http://localhost:8025)
+make dev                      # Epaper-Notifications + Mailpit (Mail-UI: http://localhost:8025)
 
 curl localhost:8080/healthz   # {"status":"ok"}
 make logs
@@ -27,7 +27,7 @@ Ohne Docker: `make run` (liest `./.env`, braucht Go 1.23+).
 Fehlerhafte Konfiguration bricht den Start ab. Es werden **alle** Probleme auf einmal gemeldet:
 
 ```
-notifier: invalid configuration (2 problems):
+epaper-notifications: invalid configuration (2 problems):
   - API_PSKS: entry 1 (orders): secret is too short (4 characters, minimum 16)
   - WORKER_COUNT: 0 is out of range (allowed: 1-64)
 ```
@@ -42,7 +42,7 @@ notifier: invalid configuration (2 problems):
 ## Projektstruktur
 
 ```
-cmd/notifier/        main: Wiring, Graceful Shutdown, `healthcheck`-Subcommand
+cmd/epaper-notifications/        main: Wiring, Graceful Shutdown, `healthcheck`-Subcommand
 internal/config/     .env-Loader, Validierung, Channel-YAML-Loader mit ${ENV}-Expansion
 internal/domain/     Notification, Status-Übergänge, SendError (temporär/permanent), Sentinel-Fehler
 internal/store/      Repository-Interfaces; memory/ = In-Memory-Implementierung

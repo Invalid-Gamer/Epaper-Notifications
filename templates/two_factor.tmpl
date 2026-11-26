@@ -1,0 +1,20 @@
+---
+description: Einmal-Code für die Zwei-Faktor-Authentifizierung
+channel: email
+format: text
+subject: "Dein Sicherheitscode"
+required: [code]
+optional: [user_name, expires_in, ip_address]
+---
+Hallo{{if .user_name}} {{.user_name}}{{end}},
+
+dein Sicherheitscode lautet:
+
+    {{.code}}
+{{if .expires_in}}
+Der Code ist {{.expires_in}} gültig.
+{{end}}{{if .ip_address}}
+Die Anmeldung wurde von der IP-Adresse {{.ip_address}} angefordert.
+{{end}}
+Gib diesen Code an niemanden weiter. Unser Support fragt nie danach.
+Wenn du dich nicht anmelden wolltest, ändere bitte umgehend dein Passwort.

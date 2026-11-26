@@ -1,0 +1,22 @@
+---
+description: Antwort des Supports auf eine Anfrage
+channel: email
+format: html
+subject: "Re: {{.ticket_subject}} [Ticket {{.ticket_id}}]"
+required: [user_name, ticket_id, ticket_subject, message]
+optional: [agent_name]
+# Eigener Absender nur für dieses Template (sonst gilt der Default des Channels):
+# from: "Support <support@example.com>"
+---
+<!DOCTYPE html>
+<html lang="de">
+<body style="margin:0;padding:24px;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1f2933;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px;">
+    <p style="font-size:13px;color:#6b7280;margin:0 0 16px;">Ticket {{.ticket_id}}: {{.ticket_subject}}</p>
+    <p>Hallo {{.user_name}},</p>
+    <div style="white-space:pre-wrap;margin:16px 0;">{{.message}}</div>
+    <p>Viele Grüße{{if .agent_name}}<br>{{.agent_name}}{{end}}<br>Dein Support-Team</p>
+    <p style="font-size:13px;color:#6b7280;">Du kannst direkt auf diese E-Mail antworten. Bitte lass die Ticketnummer im Betreff stehen.</p>
+  </div>
+</body>
+</html>

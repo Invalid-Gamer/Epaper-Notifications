@@ -13,20 +13,27 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"epaper-notificaitons/internal/api"
 	"epaper-notificaitons/internal/config"
 	"epaper-notificaitons/internal/store/memory"
+	"epaper-notificaitons/internal/template"
 )
 
 // version wird beim Build per -ldflags "-X main.version=..." gesetzt.
 var version = "dev"
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(healthcheck())
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "healthcheck":
+			os.Exit(healthcheck())
+		case "templates":
+			os.Exit(templatesCommand(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))
+		}
 	}
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "epaper-notifications:", err)
@@ -68,12 +75,31 @@ func run() error {
 		logger.Info("channel config loaded", "channel", c.Name, "file", c.Path)
 	}
 
-	// 3. Persistenz (vorerst In-Memory). Dispatcher und API bekommen den Store ab Phase 4/5.
+	// 3. Templates. Fehler (Syntax, unbekannte Variablen, ...) verhindern den Start.
+	tpls, err := template.Load(cfg.TemplatesDir)
+	if err != nil {
+		return err
+	}
+	if tpls.Len() == 0 {
+		return fmt.Errorf("no templates found in %s (expected *.tmpl files)", cfg.TemplatesDir)
+	}
+	if err := checkTemplateChannels(tpls, channels); err != nil {
+		return err
+	}
+	for _, info := range tpls.List() {
+		logger.Info("template loaded", "template", info.Name, "channel", info.Channel, "format", info.Format)
+	}
+	for _, f := range tpls.Ignored() {
+		logger.Warn("ignoring file in templates dir: templates must end in .tmpl", "file", f)
+	}
+	_ = tpls // wird ab Phase 5 (API-Validierung) und Phase 4 (Dispatcher) verdrahtet
+
+	// 4. Persistenz (vorerst In-Memory). Dispatcher und API bekommen den Store ab Phase 4/5.
 	st := memory.New()
 	_ = st
 	logger.Warn("using in-memory store: notification status and confirmations are lost on restart")
 
-	// 4. API-Server. Der Port wird vor dem Ready-Signal gebunden, damit ein
+	// 5. API-Server. Der Port wird vor dem Ready-Signal gebunden, damit ein
 	// belegter Port sofort als Startfehler auffällt.
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(cfg.APIPort))
 	if err != nil {
@@ -90,7 +116,7 @@ func run() error {
 	logger.Info("api server listening", "addr", ln.Addr().String())
 	// TODO Phase 6: Public-Server auf cfg.PublicPort (nur /confirm/{token}).
 
-	// 5. Warten auf Signal oder Serverfehler.
+	// 6. Warten auf Signal oder Serverfehler.
 	select {
 	case <-ctx.Done():
 		logger.Info("shutdown signal received")
@@ -101,7 +127,7 @@ func run() error {
 		return errors.New("api server stopped unexpectedly")
 	}
 
-	// 6. Geordnetes Herunterfahren. /readyz sofort auf 503, dann laufende
+	// 7. Geordnetes Herunterfahren. /readyz sofort auf 503, dann laufende
 	// Requests beenden. Ab Phase 4 kommt hier das Leerlaufen der Queue dazu.
 	srv.SetReady(false)
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
@@ -141,4 +167,27 @@ func healthcheck() int {
 		return 1
 	}
 	return 0
+}
+
+// checkTemplateChannels stellt sicher, dass jedes Template einen Channel
+// verwendet, für den eine Konfigurationsdatei existiert. Sonst fiele der Fehler
+// erst beim ersten Versand auf.
+func checkTemplateChannels(tpls *template.Registry, channels []config.ChannelConfig) error {
+	have := make(map[string]bool, len(channels))
+	names := make([]string, 0, len(channels))
+	for _, c := range channels {
+		have[c.Name] = true
+		names = append(names, c.Name)
+	}
+	var problems []string
+	for _, info := range tpls.List() {
+		if !have[info.Channel] {
+			problems = append(problems, fmt.Sprintf("template %q uses channel %q, but there is no config/channels/%s.yaml (available: %s)",
+				info.Name, info.Channel, info.Channel, strings.Join(names, ", ")))
+		}
+	}
+	if len(problems) > 0 {
+		return &config.Error{Problems: problems}
+	}
+	return nil
 }

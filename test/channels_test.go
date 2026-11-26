@@ -227,7 +227,7 @@ func TestEmptyAndMissingDir(t *testing.T) {
 // Stellt sicher, dass die mitgelieferte config/channels/email.yaml gültig ist
 // und mit den Werten der .env.example geladen werden kann.
 func TestShippedEmailYAML(t *testing.T) {
-	cfgs, err := config.LoadChannelConfigs("../../config/channels", lookupMap(map[string]string{
+	cfgs, err := config.LoadChannelConfigs("../config/channels", lookupMap(map[string]string{
 		"SMTP_HOST": "mailpit",
 		"SMTP_PORT": "1025",
 		"SMTP_TLS":  "none",

@@ -1,0 +1,19 @@
+---
+description: Alert-Benachrichtigung für Betrieb und Monitoring
+channel: email
+format: text
+# Einfache Anführungszeichen, weil im Betreff doppelte vorkommen.
+subject: '[{{default "ALERT" .severity}}] {{.title}}'
+required: [title, message]
+optional: [severity, source, timestamp, details_url]
+---
+{{.title}}
+{{if or .severity .source .timestamp}}
+{{if .severity}}Schweregrad: {{.severity}}
+{{end}}{{if .source}}Quelle:      {{.source}}
+{{end}}{{if .timestamp}}Zeitpunkt:   {{.timestamp}}
+{{end}}{{end}}
+{{.message}}
+{{if .details_url}}
+Details: {{.details_url}}
+{{end}}

@@ -2,13 +2,13 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMPOSE ?= docker compose
 
 .DEFAULT_GOAL := help
-.PHONY: help build run test test-race cover lint fmt tidy network up dev down restart logs ps clean
+.PHONY: help build run test test-race cover lint fmt tidy templates-check template-render network up dev down restart logs ps clean
 
 help: ## Diese Hilfe anzeigen
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 # ---------------------------------------------------------------- Go
-build: ## Binary nach ./bin/notifier bauen
+build: ## Binary nach ./bin/epaper-notifications bauen
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o bin/epaper-notifications ./cmd/epaper-notifications
 
 run: ## Lokal starten (liest ./.env)
@@ -21,7 +21,7 @@ test-race: ## Tests mit Race-Detector
 	go test -race -count=1 ./...
 
 cover: ## Test-Abdeckung
-	go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -n 1
+	go test -coverpkg=./internal/... -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -n 1
 
 lint: ## go vet (+ golangci-lint, falls installiert)
 	go vet ./...
@@ -32,6 +32,13 @@ fmt: ## Code formatieren
 
 tidy: ## go.mod/go.sum aufräumen
 	go mod tidy
+
+templates-check: ## Alle Templates prüfen (Header, Syntax, Variablen, Escaping)
+	go run ./cmd/epaper-notifications templates check
+
+template-render: ## Template rendern: make template-render T=alert D='{"title":"x","message":"y"}'
+	@test -n "$(T)" || { echo 'Aufruf: make template-render T=<name> D='"'"'{"var":"wert"}'"'"; exit 2; }
+	go run ./cmd/epaper-notifications templates render $(T) '$(D)'
 
 # ---------------------------------------------------------------- Docker
 network: ## Externes Docker-Netzwerk anlegen, falls es fehlt
@@ -48,10 +55,10 @@ down: ## Alles stoppen (auch Mailpit)
 	$(COMPOSE) --profile dev down
 
 restart: ## Notifier neu starten (z. B. nach Template-/Config-Änderung)
-	$(COMPOSE) restart notifier
+	$(COMPOSE) restart epaper-notifications
 
 logs: ## Logs verfolgen
-	$(COMPOSE) logs -f notifier
+	$(COMPOSE) logs -f epaper-notifications
 
 ps: ## Container-Status inkl. Healthcheck
 	$(COMPOSE) --profile dev ps
